@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單管理</title>
+    
+    <!-- import Bootstrap CSS -->
+    <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet">
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/jquery.min.js}"></script>
+</head>
+
+    
+<body>
+    <header class="p-3 bg-dark text-white">
+        <div class="container-fluid">
+            <div class="d-flex flex-wrap align-items-center justify-content-between">
+            
+                <!-- 管理操作選單 -->
+                <ul class="nav me-auto">
+                    <li><a th:href="@{/}" class="btn btn-warning text-black">CHKWGameStop</a></li>
+                    <li><a th:href="@{/saInfo}" class="nav-link px-2 text-white">管理員資料總覽</a></li>
+                    <li><a th:href="@{/userInfo}" class="nav-link px-2 text-white">會員資料總覽</a></li>
+                    <li><a th:href="@{/item/itemList}" class="nav-link px-2 text-white">商品總覽</a></li>
+                    <li><a th:href="@{/}" class="nav-link px-2 text-white">文章總覽</a></li>
+                    <li><a th:href="@{/orders/order-management}" class="nav-link px-2 text-white">訂單總覽</a></li>
+                    <li><a th:href="@{/shipping/shipping-tracking}" class="nav-link px-2 text-white">物流追蹤</a></li>
+                    <li><a th:href="@{/review/reviewManagement}" class="nav-link px-2 text-white">評論總覽</a></li>
+                    <li><a th:href="@{/}" class="nav-link px-2 text-white">客服表單總覽</a></li>
+                    <li><a th:href="@{/}" class="nav-link px-2 text-white">FAQ文章總覽</a></li>
+                    <li><a th:href="@{/adInfo}" class="nav-link px-2 text-white">廣告總覽</a></li>
+                    <li><a th:href="@{/}" class="nav-link px-2 text-white">商品樣式總覽</a></li>
+                    <li><a th:href="@{/}" class="nav-link px-2 text-white">商品品牌總覽</a></li>
+                </ul>
+
+                <!-- 登出按鈕 -->
+                <div class="text-end">
+                    <button type="button" class="btn btn-outline-light me-2">登出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- 主內容 -->
+    <div class="main-content">
+        <h1 class="page-title">訂單管理</h1>
+        <style>
+ 		 	.page-title {
+    		text-align: center; /* 水平置中 */
+    		margin-top: 20px;  /* 與上方內容保持距離 */
+  			}
+		</style>
+        <form id="searchForm" class="mb-3">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="buyerIdFilter" class="form-label">買家 ID</label>
+                    <input type="number" id="buyerIdFilter" class="form-control" placeholder="輸入買家 ID">
+                </div>
+                <div class="col-md-3">
+                    <label for="sellerIdFilter" class="form-label">賣家 ID</label>
+                    <input type="number" id="sellerIdFilter" class="form-control" placeholder="輸入賣家 ID">
+                </div>
+                <div class="col-md-3">
+                    <label for="orderNumberFilter" class="form-label">訂單編號</label>
+                    <input type="text" id="orderNumberFilter" class="form-control" placeholder="輸入訂單編號">
+                </div>
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">訂單狀態</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">全部</option>
+                        <option value="Pending">待處理</option>
+                        <option value="In Progress">處理中</option>
+                        <option value="Shipped">已發貨</option>
+                        <option value="Delivered">已送達</option>
+                        <option value="Canceled">已取消</option>
+                    </select>
+                </div>
+                <!-- 新增訂單日期範圍搜尋 -->
+                <div class="col-md-3 mt-3">
+                    <label for="startDateFilter" class="form-label">開始日期</label>
+                    <input type="date" id="startDateFilter" class="form-control">
+                </div>
+                <div class="col-md-3 mt-3">
+                    <label for="endDateFilter" class="form-label">結束日期</label>
+                    <input type="date" id="endDateFilter" class="form-control">
+                </div>
+                <div class="col-md-3 mt-4">
+                    <button type="button" class="btn btn-primary" onclick="searchOrders()">查詢</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 訂單表格 -->
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>買家ID</th>
+                    <th>賣家ID</th>
+                    <th>訂單編號</th>
+                    <th>商品名稱</th>
+                    <th>商品ID</th>
+                    <th>數量</th>
+                    <th>總金額</th>
+                    <th>付款情形</th>
+                    <th>物流情形</th>
+                    <th>訂單狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="orderTable"></tbody>
+        </table>
+
+        <!-- 分頁導航 -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination" id="pagination"></ul>
+        </nav>
+    </div>
+
+    <!-- 訂單詳情模態框 -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <!-- 模態框標題 -->
+                    <h5 class="modal-title" id="orderDetailModalLabel">訂單詳情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 訂單詳情表單 -->
+                    <div class="mb-3">
+                        <label class="form-label">訂單編號</label>
+                        <input type="text" id="modalOrderNumber" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">下單時間</label>
+                        <input type="text" id="modalOrderDate" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">買家 ID</label>
+                        <input type="number" id="modalBuyerId" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">賣家 ID</label>
+                        <input type="number" id="modalSellerId" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">商品名稱</label>
+                        <input type="text" id="modalItemName" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">商品 ID</label>
+                        <input type="text" id="modalItemId" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalOrderStatus" class="form-label">訂單狀態</label>
+                        <select id="modalOrderStatus" class="form-select">
+                            <option value="Pending">待處理</option>
+                            <option value="In Progress">處理中</option>
+                            <option value="Shipped">已發貨</option>
+                            <option value="Delivered">已送達</option>
+                            <!-- 取消選項不在此提供，必須使用棄單按鈕 -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPaymentStatus" class="form-label">付款情形</label>
+                        <select id="modalPaymentStatus" class="form-select">
+                            <option value="已付款">已付款</option>
+                            <option value="未付款">未付款</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalShippingStatus" class="form-label">物流情形</label>
+                        <select id="modalShippingStatus" class="form-select">
+                            <option value="待發貨">待發貨</option>
+                            <option value="運輸中">運輸中</option>
+                            <option value="已送達">已送達</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <!-- 模態框操作按鈕 -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    <button type="button" class="btn btn-primary" onclick="saveOrderChanges()">保存更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 部分 -->
+    <script>
+        let currentOrderId;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        const statusMap = {
+            "Pending": "待處理",
+            "In Progress": "處理中",
+            "Shipped": "已發貨",
+            "Delivered": "已送達",
+            "Canceled": "已取消"
+        };
+
+        const shippingStatusMap = {
+            "待發貨": "待發貨",
+            "運輸中": "運輸中",
+            "已送達": "已送達",
+            "未知": "未知"
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const orderTable = document.getElementById("orderTable");
+
+            function loadOrders(page = 1) {
+                const buyerId = document.getElementById("buyerIdFilter").value;
+                const sellerId = document.getElementById("sellerIdFilter").value;
+                const orderNumber = document.getElementById("orderNumberFilter").value;
+                const status = document.getElementById("statusFilter").value;
+                const startDate = document.getElementById("startDateFilter").value;
+                const endDate = document.getElementById("endDateFilter").value;
+
+                const params = new URLSearchParams();
+                params.append("page", page);
+                params.append("size", 10); // 每頁10筆資料
+                if (buyerId) params.append("buyerId", buyerId);
+                if (sellerId) params.append("sellerId", sellerId);
+                if (orderNumber) params.append("orderNumber", orderNumber);
+                if (status) params.append("status", status);
+                if (startDate) params.append("startDate", startDate);
+                if (endDate) params.append("endDate", endDate);
+
+                fetch(`/orders?${params.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const orders = data.content;
+                        currentPage = data.number + 1;
+                        totalPages = data.totalPages;
+
+                        orderTable.innerHTML = "";
+                        orders.forEach(order => {
+                            const statusClass = {
+                                "Pending": "table-warning",
+                                "In Progress": "table-primary",
+                                "Shipped": "table-info",
+                                "Delivered": "table-success",
+                                "Canceled": "table-secondary"
+                            }[order.status] || "";
+
+                            const row = `
+                                <tr class="${statusClass}">
+                                    <td>${order.id}</td>
+                                    <td>${order.buyerId}</td>
+                                    <td>${order.sellerId}</td>
+                                    <td>${order.orderNumber || 'N/A'}</td>
+                                    <td>${order.itemName || 'N/A'}</td>
+                                    <td>${order.itemtId || 'N/A'}</td>
+                                    <td>${order.quantity || 0}</td>
+                                    <td>${order.total || 0}</td>
+                                    <td>${order.paymentStatus || 'N/A'}</td>
+                                    <td>${shippingStatusMap[order.shippingStatus] || '未知'}</td>
+                                    <td>${statusMap[order.status] || '未知'}</td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm" onclick="viewOrder(${order.id})">詳情</button>
+                                        <button class="btn btn-warning btn-sm" ${order.status === 'Canceled' ? 'disabled' : ''} onclick="cancelOrder(${order.id})">棄單</button>
+                                    </td>
+                                </tr>`;
+                            orderTable.insertAdjacentHTML("beforeend", row);
+                        });
+
+                        renderPagination();
+                    });
+            }
+
+            function renderPagination() {
+                const pagination = document.getElementById("pagination");
+                pagination.innerHTML = "";
+
+                const createPageItem = (page, label, disabled = false, active = false) => {
+                    return `
+                        <li class="page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="goToPage(${page})">${label}</a>
+                        </li>`;
+                };
+
+                // 上一頁
+                pagination.insertAdjacentHTML("beforeend", createPageItem(currentPage - 1, '«', currentPage === 1));
+
+                // 頁碼
+                for (let i = 1; i <= totalPages; i++) {
+                    pagination.insertAdjacentHTML("beforeend", createPageItem(i, i, false, i === currentPage));
+                }
+
+                // 下一頁
+                pagination.insertAdjacentHTML("beforeend", createPageItem(currentPage + 1, '»', currentPage === totalPages));
+            }
+
+            window.goToPage = (page) => {
+                if (page < 1 || page > totalPages) return;
+                loadOrders(page);
+            };
+
+            window.searchOrders = () => {
+                loadOrders(1);
+            };
+
+            window.viewOrder = (orderId) => {
+                currentOrderId = orderId;
+                fetch(`/orders/${orderId}`)
+                    .then(response => response.json())
+                    .then(order => {
+                        document.getElementById("modalOrderNumber").value = order.orderNumber;
+                        document.getElementById("modalOrderDate").value = new Date(order.orderDate).toLocaleString();
+                        document.getElementById("modalBuyerId").value = order.buyerId;
+                        document.getElementById("modalSellerId").value = order.sellerId;
+                        document.getElementById("modalItemName").value = order.itemName;
+                        document.getElementById("modalItemId").value = order.itemId;
+                        document.getElementById("modalOrderStatus").value = order.status;
+                        document.getElementById("modalPaymentStatus").value = order.paymentStatus;
+                        document.getElementById("modalShippingStatus").value = order.shippingStatus;
+
+                        const modal = new bootstrap.Modal(document.getElementById("orderDetailModal"));
+                        modal.show();
+                    })
+                    .catch(error => console.error("獲取訂單詳情時出錯:", error));
+            };
+
+            window.saveOrderChanges = () => {
+                if (!currentOrderId) return;
+
+                const updatedFields = {
+                    status: document.getElementById("modalOrderStatus").value,
+                    paymentStatus: document.getElementById("modalPaymentStatus").value,
+                    shippingStatus: document.getElementById("modalShippingStatus").value,
+                };
+
+                fetch(`/orders/${currentOrderId}`, {
+                    method: "PUT",
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatedFields),
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("訂單詳情已更新");
+                        const modal = bootstrap.Modal.getInstance(document.getElementById("orderDetailModal"));
+                        modal.hide();
+                        loadOrders(currentPage);
+                    } else {
+                        alert("更新失敗，請稍後重試");
+                    }
+                })
+                .catch(error => console.error("更新訂單詳情時出錯:", error));
+            };
+
+            window.cancelOrder = (orderId) => {
+                if (confirm("確定要將此訂單標記為棄單嗎？")) {
+                    fetch(`/orders/${orderId}/cancel`, {
+                        method: "POST",
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            alert("訂單已標記為棄單");
+                            loadOrders(currentPage);
+                        } else {
+                            alert("操作失敗");
+                        }
+                    })
+                    .catch(error => console.error("棄單時出錯:", error));
+                }
+            };
+
+            loadOrders();
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
